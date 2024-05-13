@@ -1,0 +1,6 @@
+from django.urls import path
+from .views import submit_employee_payroll
+
+urlpatterns = [
+    path('submit_employee_payroll/', submit_employee_payroll, name='submit_employee_payroll'),
+]
