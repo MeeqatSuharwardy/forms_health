@@ -65,20 +65,27 @@ def submit_anti_harassment_form(request):
 def search_anti_harassment_records(request):
     printed_name = request.GET.get('printedName')
     date_of_birth = request.GET.get('dateOfBirth')
+    query = AntiHarassmentRecord.objects.all()
 
-    if printed_name and date_of_birth:
-        records = AntiHarassmentRecord.objects.filter(
-            printed_name__icontains=printed_name,
-            date_of_birth=date_of_birth
-        )
-        data = [
-            {
-                'printed_name': record.printed_name,
-                'date_of_birth': str(record.date_of_birth),
-                'submission_date': str(record.submission_date),
-                'pdf_file': request.build_absolute_uri(record.pdf_file.url)  # Provide full URL to the PDF file
-            } for record in records
-        ]
-        return JsonResponse({'records': data}, status=200)
+    if printed_name:
+        query = query.filter(printed_name__icontains=printed_name)
+    if date_of_birth:
+        try:
+            parsed_date = datetime.strptime(date_of_birth, "%Y-%m-%d").date()
+            query = query.filter(date_of_birth=parsed_date)
+        except ValueError:
+            return JsonResponse({'error': 'Invalid date format'}, status=400)
 
-    return JsonResponse({'error': 'Missing parameters'}, status=400)
+    # Define the base URL manually if necessary
+    base_url = 'http://127.0.0.1:8000'  # Adjust based on your deployment settings
+
+    data = [
+        {
+            'printed_name': record.printed_name,
+            'date_of_birth': str(record.date_of_birth),
+            'submission_date': str(record.submission_date),
+            'pdf_url': f"{base_url}/{record.pdf_file.name}"
+        }
+        for record in query
+    ]
+    return JsonResponse({'records': data}, status=200)

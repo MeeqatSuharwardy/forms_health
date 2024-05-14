@@ -6,6 +6,7 @@ from weasyprint import HTML
 import json
 import base64
 from django.core.files.base import ContentFile
+from datetime import datetime
 
 @csrf_exempt
 def submit_employee_payroll(request):
@@ -55,3 +56,30 @@ def submit_employee_payroll(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
+
+def search_employee_payroll(request):
+    employee_name = request.GET.get('employeeName')
+    date_signed = request.GET.get('dateSigned')
+    query = EmployeePayroll.objects.all()
+
+    if not employee_name or not date_signed:
+        return JsonResponse({'error': 'Missing parameters: employeeName and dateSigned are required'}, status=400)
+
+    try:
+        parsed_date = datetime.strptime(date_signed, '%Y-%m-%d').date()
+        query = query.filter(employee_name__icontains=employee_name, date_signed=parsed_date)
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Please use YYYY-MM-DD format.'}, status=400)
+
+    # Define the base URL manually if necessary
+    base_url = 'http://127.0.0.1:8000'  # Adjust based on your deployment settings
+
+    data = [
+        {
+            'employee_name': payroll.employee_name,
+            'date_signed': str(payroll.date_signed),
+            'pdf_url': f"{base_url}/{payroll.pdf_file.name}"
+        }
+        for payroll in query
+    ]
+    return JsonResponse({'payrolls': data}, status=200)

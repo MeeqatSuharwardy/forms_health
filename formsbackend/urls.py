@@ -30,5 +30,6 @@ urlpatterns = [
     path('', include('employee_emergency_contacts.urls')),
     path('', include('employee_payroll_information.urls')),
     path('', include('hippa_agreement.urls')),
-    path('', include('credential_comprehensive.urls'))
+    path('', include('credential_comprehensive.urls')),
+    path('', include('sendEmail.urls'))
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -44,3 +44,28 @@ def submit_hipaa_agreement(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
+
+
+def search_hipaa_agreements(request):
+    employee_name = request.GET.get('employeeName')
+    query = HIPAAAgreement.objects.all()
+
+    if not employee_name:
+        return JsonResponse({'error': 'Missing parameter: employeeName is required'}, status=400)
+
+    query = query.filter(employee_name__icontains=employee_name)
+
+    # Define the base URL manually if necessary
+    base_url = 'http://127.0.0.1:8000'  # Adjust based on your deployment settings
+
+    data = [
+        {
+            'employee_name': agreement.employee_name,
+            'agreement_date': str(agreement.agreement_date),
+            'agreement_month': agreement.agreement_month,
+            'agreement_year': agreement.agreement_year,
+            'pdf_url': f"{base_url}/{agreement.pdf_file.name}"
+        }
+        for agreement in query
+    ]
+    return JsonResponse({'agreements': data}, status=200)

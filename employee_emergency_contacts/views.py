@@ -6,6 +6,7 @@ from weasyprint import HTML
 import json
 import base64
 from django.core.files.base import ContentFile
+from datetime import datetime
 
 @csrf_exempt
 def submit_emergency_contact(request):
@@ -65,13 +66,26 @@ def submit_emergency_contact(request):
 def search_emergency_contacts(request):
     name = request.GET.get('employee_name')
     date = request.GET.get('date_signed')
+    query = EmergencyContact.objects.all()
 
-    if name and date:
-        contacts = EmergencyContact.objects.filter(
-            employee_name__icontains=name,
-            date_signed=date
-        )
-        data = [{'employee_name': contact.employee_name, 'date_signed': str(contact.date_signed)} for contact in contacts]
-        return JsonResponse({'contacts': data}, status=200)
+    if not name or not date:
+        return JsonResponse({'error': 'Missing parameters: employee_name and date_signed are required'}, status=400)
 
-    return JsonResponse({'error': 'Missing parameters'}, status=400)
+    try:
+        parsed_date = datetime.strptime(date, '%Y-%m-%d').date()
+        query = query.filter(employee_name__icontains=name, date_signed=parsed_date)
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Please use YYYY-MM-DD format.'}, status=400)
+
+    # Define the base URL manually if necessary
+    base_url = 'http://127.0.0.1:8000'  # Adjust based on your deployment settings
+
+    data = [
+        {
+            'employee_name': contact.employee_name,
+            'date_signed': str(contact.date_signed),
+            'pdf_url': f"{base_url}/{contact.pdf_file.name}"
+        }
+        for contact in query
+    ]
+    return JsonResponse({'contacts': data}, status=200)

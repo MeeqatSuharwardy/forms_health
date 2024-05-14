@@ -6,6 +6,7 @@ from weasyprint import HTML
 import json
 import base64
 from django.core.files.base import ContentFile
+from datetime import datetime
 
 @csrf_exempt
 def submit_direct_deposit(request):
@@ -71,6 +72,37 @@ def search_direct_deposits(request):
     deposits = DirectDeposit.objects.filter(name__icontains=name, date=date)
     if deposits.exists():
         data = [{'name': deposit.name, 'date': str(deposit.date)} for deposit in deposits]
+        return JsonResponse({'deposits': data}, status=200)
+    else:
+        return JsonResponse({'error': 'No deposits found'}, status=404)
+
+
+def search_direct_deposits(request):
+    name = request.GET.get('name')
+    date = request.GET.get('date')
+    query = DirectDeposit.objects.all()
+
+    if not name or not date:
+        return JsonResponse({'error': 'Missing parameters: name and date are required'}, status=400)
+
+    try:
+        parsed_date = datetime.strptime(date, '%Y-%m-%d').date()
+        query = query.filter(name__icontains=name, date=parsed_date)
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Please use YYYY-MM-DD format.'}, status=400)
+
+    # Define the base URL manually if necessary
+    base_url = 'http://127.0.0.1:8000'  # Adjust based on your deployment settings
+
+    if query.exists():
+        data = [
+            {
+                'name': deposit.name,
+                'date': str(deposit.date),
+                'pdf_url': f"{base_url}/{deposit.pdf_file.name}"
+            }
+            for deposit in query
+        ]
         return JsonResponse({'deposits': data}, status=200)
     else:
         return JsonResponse({'error': 'No deposits found'}, status=404)
